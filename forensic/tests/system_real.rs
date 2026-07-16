@@ -19,11 +19,7 @@ use std::process::Command;
 /// (`Bluetooth: N paired device(s), …`).
 fn parse_our_count(stdout: &str) -> Option<usize> {
     let line = stdout.lines().find(|l| l.starts_with("Bluetooth:"))?;
-    let n = line
-        .strip_prefix("Bluetooth:")?
-        .trim_start()
-        .split_whitespace()
-        .next()?;
+    let n = line.strip_prefix("Bluetooth:")?.split_whitespace().next()?;
     n.parse().ok()
 }
 
