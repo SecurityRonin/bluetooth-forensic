@@ -154,7 +154,7 @@ fn paired_device_note_omits_name_and_key_when_absent() {
         note.contains("device 00:16:94:8D:12:34."),
         "no name suffix: {note}"
     );
-    assert!(!note.contains("("), "no parenthesised name: {note}");
+    assert!(!note.contains('('), "no parenthesised name: {note}");
     assert!(note.contains("LastSeen unknown"));
     assert!(note.contains("LastConnected 2019-04-17T18:40:00Z"));
     assert!(!note.contains("A plaintext classic link key"));
@@ -187,6 +187,6 @@ fn link_key_note_without_name() {
         mac: "00:16:94:8D:12:34".to_string(),
         name: String::new(),
     };
-    assert!(!k.note().contains("("));
+    assert!(!k.note().contains('('));
     assert_eq!(k.subjects()[0].label, None);
 }

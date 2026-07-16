@@ -55,8 +55,24 @@ pub enum BluetoothFinding {
 /// Turn decoded devices into findings: one [`BluetoothFinding::PairedDevice`] per device, plus a
 /// [`BluetoothFinding::LinkKeyStored`] for each device that has a stored link key.
 #[must_use]
-pub fn audit(_devices: &[BluetoothDevice]) -> Vec<BluetoothFinding> {
-    Vec::new() // RED stub
+pub fn audit(devices: &[BluetoothDevice]) -> Vec<BluetoothFinding> {
+    let mut out = Vec::new();
+    for d in devices {
+        out.push(BluetoothFinding::PairedDevice {
+            mac: d.mac.clone(),
+            name: d.name.clone(),
+            last_seen: render_time(d.last_seen_filetime),
+            last_connected: render_time(d.last_connected_filetime),
+            has_link_key: d.has_link_key,
+        });
+        if d.has_link_key {
+            out.push(BluetoothFinding::LinkKeyStored {
+                mac: d.mac.clone(),
+                name: d.name.clone(),
+            });
+        }
+    }
+    out
 }
 
 /// Render a raw `FILETIME` to a human-readable UTC string, or `None` when absent/undatable.
@@ -109,7 +125,34 @@ impl Observation for BluetoothFinding {
     }
 
     fn note(&self) -> String {
-        String::new() // RED stub
+        match self {
+            BluetoothFinding::PairedDevice {
+                mac,
+                name,
+                last_seen,
+                last_connected,
+                has_link_key,
+            } => {
+                let seen = last_seen.as_deref().unwrap_or("unknown");
+                let conn = last_connected.as_deref().unwrap_or("unknown");
+                let key = if *has_link_key {
+                    " A plaintext classic link key is stored for this device."
+                } else {
+                    ""
+                };
+                format!(
+                    "Paired Bluetooth device {mac}{}. LastSeen {seen}, LastConnected {conn}.{key} \
+                     LastConnected/LastSeen may reflect pairing time, not last use — corroborate.",
+                    name_suffix(name)
+                )
+            }
+            BluetoothFinding::LinkKeyStored { mac, name } => format!(
+                "A plaintext classic Bluetooth link key for device {mac}{} is stored in the SYSTEM \
+                 hive and is extractable — consistent with credential material that enables \
+                 impersonation of the pairing.",
+                name_suffix(name)
+            ),
+        }
     }
 
     fn mitre(&self) -> &'static [&'static str] {
