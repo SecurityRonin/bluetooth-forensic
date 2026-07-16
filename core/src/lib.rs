@@ -54,8 +54,13 @@ pub struct BluetoothDevice {
 /// Returns `None` for anything that is not exactly 12 ASCII hex characters (matching `bthport.pl`'s
 /// use of the raw subkey name as the device unique ID — L66). Never panics.
 #[must_use]
-pub fn parse_mac(_subkey_name: &str) -> Option<String> {
-    None // RED stub
+pub fn parse_mac(subkey_name: &str) -> Option<String> {
+    if subkey_name.len() != 12 || !subkey_name.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    let up = subkey_name.to_ascii_uppercase();
+    let octets: Vec<&str> = (0..12).step_by(2).map(|i| &up[i..i + 2]).collect();
+    Some(octets.join(":"))
 }
 
 /// Decode a `Name` value into the device friendly name.
@@ -66,8 +71,24 @@ pub fn parse_mac(_subkey_name: &str) -> Option<String> {
 /// trailing `0x00`, which is stripped. Invalid encodings are replaced (`from_utf16_lossy` /
 /// `from_utf8_lossy`); an odd byte length drops the trailing lone byte rather than panicking.
 #[must_use]
-pub fn decode_name(_data: &[u8], _is_reg_sz: bool) -> String {
-    String::new() // RED stub
+pub fn decode_name(data: &[u8], is_reg_sz: bool) -> String {
+    if is_reg_sz {
+        let mut units: Vec<u16> = data
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        if units.last() == Some(&0) {
+            units.pop();
+        }
+        String::from_utf16_lossy(&units)
+    } else {
+        let end = if data.last() == Some(&0) {
+            data.len() - 1
+        } else {
+            data.len()
+        };
+        String::from_utf8_lossy(&data[..end]).into_owned()
+    }
 }
 
 /// Decode an 8-byte little-endian `FILETIME` value (`LastSeen` / `LastConnected`).
@@ -76,8 +97,9 @@ pub fn decode_name(_data: &[u8], _is_reg_sz: bool) -> String {
 /// `unpack("VV", …)` of two little-endian `u32`s (low32, high32) (L77/L82). Returns `None` when
 /// fewer than 8 bytes are available; never panics.
 #[must_use]
-pub fn decode_filetime(_data: &[u8]) -> Option<u64> {
-    None // RED stub
+pub fn decode_filetime(data: &[u8]) -> Option<u64> {
+    let bytes = data.get(..8)?;
+    Some(u64::from_le_bytes(bytes.try_into().ok()?))
 }
 
 /// Assemble a [`BluetoothDevice`] from a device subkey name and the raw bytes of its values.
@@ -88,13 +110,20 @@ pub fn decode_filetime(_data: &[u8]) -> Option<u64> {
 /// 12-hex device MAC (so a non-device subkey is skipped). Never panics.
 #[must_use]
 pub fn decode_device(
-    _subkey_name: &str,
-    _name: Option<(&[u8], bool)>,
-    _last_seen: Option<&[u8]>,
-    _last_connected: Option<&[u8]>,
-    _has_link_key: bool,
+    subkey_name: &str,
+    name: Option<(&[u8], bool)>,
+    last_seen: Option<&[u8]>,
+    last_connected: Option<&[u8]>,
+    has_link_key: bool,
 ) -> Option<BluetoothDevice> {
-    None // RED stub
+    let mac = parse_mac(subkey_name)?;
+    Some(BluetoothDevice {
+        mac,
+        name: name.map(|(d, sz)| decode_name(d, sz)).unwrap_or_default(),
+        last_seen_filetime: last_seen.and_then(decode_filetime),
+        last_connected_filetime: last_connected.and_then(decode_filetime),
+        has_link_key,
+    })
 }
 
 #[cfg(test)]
