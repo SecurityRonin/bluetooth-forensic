@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core"]
+members = ["core", "forensic"]
 
 # Single source of truth for shared fields (DRY). `version` is NOT hoisted — core and forensic
 # are versioned independently.
