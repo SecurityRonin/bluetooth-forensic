@@ -1,0 +1,18 @@
+[package]
+name = "bluetooth-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Pure-Rust read-only decoder for Windows Bluetooth pairing/connection evidence stored under SYSTEM\\…\\BTHPORT\\Parameters\\Devices — decodes a device MAC (subkey name), friendly Name (REG_SZ or REG_BINARY), and LastSeen/LastConnected FILETIMEs from raw value bytes. No hive I/O; panic-free."
+license.workspace = true
+authors.workspace = true
+keywords = ["forensics", "bluetooth", "windows", "dfir", "bthport"]
+categories = ["parser-implementations"]
+repository.workspace = true
+readme.workspace = true
+exclude = ["tests/data/", "fuzz/"]
+
+[dependencies]
+
+[lints]
+workspace = true

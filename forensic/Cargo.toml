@@ -1,0 +1,20 @@
+[package]
+name = "bluetooth-forensic"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Windows Bluetooth forensic analyzer — reports paired devices (MAC, friendly name, LastSeen/LastConnected) from the SYSTEM hive as evidence, flags a stored extractable classic link key, plus the bluetooth4n6 CLI."
+license.workspace = true
+authors.workspace = true
+keywords = ["forensics", "bluetooth", "windows", "dfir", "bthport"]
+categories = ["command-line-utilities", "parser-implementations"]
+repository.workspace = true
+readme.workspace = true
+
+[dependencies]
+bluetooth-core = { workspace = true }
+winreg-core = { workspace = true }
+forensicnomicon = { workspace = true }
+
+[lints]
+workspace = true
