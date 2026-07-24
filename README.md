@@ -39,7 +39,7 @@ The MS Bluetooth stack (`SYSTEM\ControlSet00N\Services\BTHPORT\Parameters`) reco
 
 ## Layers
 
-- **`bluetooth-core`** — pure decoders with no hive I/O: `parse_mac`, `decode_name(bytes, is_reg_sz)`, `decode_filetime`, and `decode_device` → `BluetoothDevice`. `#![forbid(unsafe_code)]`, panic-free by lint.
+- **`bluetooth-forensic-core`** (imports as `bluetooth_core`) — pure decoders with no hive I/O: `parse_mac`, `decode_name(bytes, is_reg_sz)`, `decode_filetime`, and `decode_device` → `BluetoothDevice`. `#![forbid(unsafe_code)]`, panic-free by lint.
 - **`bluetooth-forensic`** — `audit(&[BluetoothDevice]) -> Vec<BluetoothFinding>` (graded `forensicnomicon` findings) and the `bluetooth4n6` CLI, which does the `winreg-core` hive walking.
 
 ## Validation

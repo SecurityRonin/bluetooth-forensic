@@ -11,7 +11,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-bluetooth-core = { path = "../core" }
+bluetooth-core = { path = "../core", package = "bluetooth-forensic-core" }
 bluetooth-forensic = { path = "../forensic" }
 # For the `Observation` trait, whose projections (note/subjects/severity/mitre) the target exercises.
 forensicnomicon = "1"

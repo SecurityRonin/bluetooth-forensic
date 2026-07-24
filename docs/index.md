@@ -8,7 +8,7 @@ When a Windows host pairs with a Bluetooth device, it records the device under
 MAC** (12 hex, no separators), with a friendly `Name` and `LastSeen` / `LastConnected` `FILETIME`s.
 A plaintext classic link key, when present, lives under `…\Parameters\Keys\{adapterMAC}\{deviceMAC}`.
 
-`bluetooth-core` is the pure decoder (`parse_mac`, `decode_name`, `decode_filetime`,
+`bluetooth-forensic-core` (imports as `bluetooth_core`) is the pure decoder (`parse_mac`, `decode_name`, `decode_filetime`,
 `decode_device`); `bluetooth-forensic` walks the hive's control sets, reports each paired device as
 evidence, flags a stored extractable link key, and ships the **`bluetooth4n6`** CLI.
 

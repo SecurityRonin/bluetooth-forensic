@@ -8,12 +8,15 @@ members = ["core", "forensic"]
 edition = "2021"
 rust-version = "1.85"
 license = "Apache-2.0"
-authors = ["Albert Hui"]
+authors = ["Albert Hui <albert@securityronin.com>"]
 repository = "https://github.com/SecurityRonin/bluetooth-forensic"
 readme = "README.md"
 
 [workspace.dependencies]
-bluetooth-core = { path = "core", version = "0.1.0" }
+# The package is `bluetooth-forensic-core` (crates.io treats `-`/`_` as one name, and
+# `bluetooth_core` — an unrelated BLE/btleplug wrapper — already claims it); the dep alias
+# keeps the `bluetooth_core` import path.
+bluetooth-core = { path = "core", version = "0.1.0", package = "bluetooth-forensic-core" }
 # Generic REGF hive parser — Bluetooth pairings live in the SYSTEM hive, so the binary walks it
 # with winreg-core.
 winreg-core = "0.2"
