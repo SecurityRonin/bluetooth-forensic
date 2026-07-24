@@ -60,6 +60,27 @@ fn render_time_absent_or_undatable_is_none() {
     assert_eq!(render_time(Some(1)), None);
 }
 
+#[test]
+fn render_time_out_of_range_filetime_is_none_not_panic() {
+    // A crafted FILETIME beyond jiff's year-9999 bound must degrade to None, never panic — the
+    // fuzz-found regression (input 0xBBBB_BBBB_BBBB_BBBB ≈ year 44500). u64::MAX is the extreme.
+    assert_eq!(render_time(Some(0xBBBB_BBBB_BBBB_BBBB)), None);
+    assert_eq!(render_time(Some(u64::MAX)), None);
+    // The greatest datable FILETIME (jiff's Timestamp::MAX, 9999-12-31T23:59:59.999999999Z) still
+    // renders, and one tick past it does not — the exact boundary.
+    let max_ticks = u64::try_from(jiff::Timestamp::MAX.as_nanosecond() / 100).unwrap();
+    let max_datable = max_ticks + 116_444_736_000_000_000;
+    assert!(
+        render_time(Some(max_datable)).is_some(),
+        "boundary is datable"
+    );
+    assert_eq!(
+        render_time(Some(max_datable + 1)),
+        None,
+        "one past boundary"
+    );
+}
+
 // ── audit: device → findings ────────────────────────────────────────────────
 
 #[test]

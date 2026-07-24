@@ -75,10 +75,32 @@ pub fn audit(devices: &[BluetoothDevice]) -> Vec<BluetoothFinding> {
     out
 }
 
+/// FILETIME epoch offset (1601-01-01 → 1970-01-01) in 100 ns ticks — the documented Windows
+/// constant, mirrored here to bound-check a raw value without a round-trip through the converter.
+const FILETIME_UNIX_EPOCH_DIFF: u64 = 116_444_736_000_000_000;
+
+/// Pass a raw `FILETIME` through only when it lands inside jiff's representable instant range;
+/// otherwise `None` ("undatable").
+///
+/// A crafted, astronomically large `FILETIME` (e.g. `0xBBBB_BBBB_BBBB_BBBB`, ~year 44500) decodes
+/// to a second count that fits an `i64` but exceeds jiff's year-9999 `Timestamp` bound. `jiff`'s
+/// `Timestamp::from_nanosecond` only range-checks the `i64` fit, then constructs via a
+/// debug-asserting `new_unchecked` — so in a `debug_assertions` build (cargo-fuzz's default) that
+/// value panics *inside* the converter instead of yielding `Err`, and `winreg_core`'s `.ok()`
+/// cannot catch a panic. Gating on the same nanosecond arithmetic the converter uses keeps every
+/// undatable value from reaching it. (The upstream defect is jiff's incomplete bound check; this
+/// guard is the parser distrusting attacker-controlled input, per the panic-free standard.)
+fn datable_filetime(filetime: u64) -> Option<u64> {
+    let ticks = filetime.checked_sub(FILETIME_UNIX_EPOCH_DIFF)?;
+    let nanos = i128::from(ticks).checked_mul(100)?;
+    (nanos <= jiff::Timestamp::MAX.as_nanosecond()).then_some(filetime)
+}
+
 /// Render a raw `FILETIME` to a human-readable UTC string, or `None` when absent/undatable.
 #[must_use]
 pub fn render_time(filetime: Option<u64>) -> Option<String> {
     filetime
+        .and_then(datable_filetime)
         .and_then(filetime_to_datetime)
         .map(|t| t.to_string())
 }

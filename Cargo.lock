@@ -47,6 +47,7 @@ version = "0.1.0"
 dependencies = [
  "bluetooth-forensic-core",
  "forensicnomicon",
+ "jiff",
  "winreg-core",
 ]
 

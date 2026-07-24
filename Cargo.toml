@@ -21,6 +21,10 @@ bluetooth-core = { path = "core", version = "0.1.0", package = "bluetooth-forens
 # with winreg-core.
 winreg-core = "0.2"
 forensicnomicon = "1"
+# Used only to derive the datable-instant bound (`Timestamp::MAX`) that gates a raw FILETIME before
+# it reaches winreg-core's converter — see forensic/src/lib.rs::datable_filetime. Same jiff major
+# winreg-core itself pulls.
+jiff = "0.2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
