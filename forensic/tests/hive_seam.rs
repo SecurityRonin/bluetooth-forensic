@@ -12,8 +12,6 @@
 //! Tier-1 oracle (RegRipper's `bthport.pl` on a genuine hive) lives in `system_real.rs`.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use std::io::Cursor;
-
 use bluetooth_forensic::{devices_from_hive, BluetoothDevice};
 use winreg_core::hive::Hive;
 

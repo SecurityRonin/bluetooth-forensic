@@ -18,11 +18,111 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeSet;
+use std::io::Cursor;
+
+use bluetooth_core::{decode_device, parse_mac};
 use forensicnomicon::report::{Category, Finding, Observation, Severity, Source, SubjectRef};
-use winreg_core::key::filetime_to_datetime;
+use winreg_core::hive::Hive;
+use winreg_core::key::{filetime_to_datetime, Key};
 
 // Re-export the core type that appears in this crate's public API.
 pub use bluetooth_core::BluetoothDevice;
+
+/// Control sets to walk. `bthport.pl` resolves the active set via `Select\Current`; walking both
+/// numbered sets is equivalent and robust (a hive populates one or both, and an absent set is
+/// skipped).
+const CONTROL_SETS: &[&str] = &["ControlSet001", "ControlSet002"];
+
+/// Walk a `SYSTEM` hive's MS Bluetooth stack and decode every paired device.
+///
+/// For each control set this opens `…\Services\BTHPORT\Parameters\Devices`, treats each subkey as a
+/// device MAC (the subkey name), reads its `Name` / `LastSeen` / `LastConnected` values, and cross-
+/// references the sibling `…\Parameters\Keys` subtree for a stored classic link key — feeding each
+/// device to [`bluetooth_core::decode_device`]. Paths follow RegRipper's `bthport.pl`
+/// (`keydet89/RegRipper3.0`): the device subkeys under `Services\BTHPORT\Parameters\Devices` (L56),
+/// the subkey name as the device MAC (L66), and the `Name` / `LastSeen` / `LastConnected` values
+/// (L72/L77/L82).
+///
+/// The caller supplies an already-opened [`Hive`], so the bootstrap (REGF signature, checksum, and
+/// version) is validated before this runs. Within the walk a malformed/absent key or value is a
+/// per-artifact miss: it is skipped so a corrupt subtree yields the readable devices rather than
+/// aborting the whole extraction. Non-MAC subkeys under `Devices` are skipped. Never panics.
+#[must_use]
+pub fn devices_from_hive(hive: &Hive<Cursor<Vec<u8>>>) -> Vec<BluetoothDevice> {
+    let mut out = Vec::new();
+    for cs in CONTROL_SETS {
+        let devices_path = format!(r"{cs}\Services\BTHPORT\Parameters\Devices");
+        let Ok(Some(devices)) = hive.open_key(&devices_path) else {
+            continue;
+        };
+        let link_key_macs = link_key_macs(hive, cs);
+        let Ok(device_keys) = devices.subkeys() else {
+            continue;
+        };
+        for dev_key in device_keys {
+            let subkey_name = dev_key.name();
+            let Some(mac) = parse_mac(&subkey_name) else {
+                continue; // not a device-MAC subkey
+            };
+            let name = read_name_value(&dev_key);
+            let last_seen = read_raw(&dev_key, "LastSeen");
+            let last_connected = read_raw(&dev_key, "LastConnected");
+            if let Some(device) = decode_device(
+                &subkey_name,
+                name.as_ref().map(|(d, sz)| (d.as_slice(), *sz)),
+                last_seen.as_deref(),
+                last_connected.as_deref(),
+                link_key_macs.contains(&mac),
+            ) {
+                out.push(device);
+            }
+        }
+    }
+    out
+}
+
+/// Read the `Name` value's `(bytes, is_reg_sz)`, or `None` when absent/unreadable. `is_reg_sz` is
+/// true for `REG_SZ`/`REG_EXPAND_SZ` (UTF-16LE), false for `REG_BINARY` (ASCII with trailing NUL).
+fn read_name_value(key: &Key<'_, Hive<Cursor<Vec<u8>>>>) -> Option<(Vec<u8>, bool)> {
+    let value = key.value("Name").ok()??;
+    let is_reg_sz = matches!(value.data_type().name(), "REG_SZ" | "REG_EXPAND_SZ");
+    let data = value.raw_data().ok()?;
+    Some((data, is_reg_sz))
+}
+
+/// Read a value's raw bytes by name, or `None` when the value is absent/unreadable.
+fn read_raw(key: &Key<'_, Hive<Cursor<Vec<u8>>>>, name: &str) -> Option<Vec<u8>> {
+    let value = key.value(name).ok()??;
+    value.raw_data().ok()
+}
+
+/// The set of device MACs that have a stored classic link key under `{cs}\…\BTHPORT\Parameters\Keys`.
+///
+/// Under each adapter subkey the link keys are `REG_BINARY` values named by the remote device MAC.
+/// The key bytes themselves are never read or retained — only the MAC (presence). An absent or
+/// unreadable `Keys` subtree yields an empty set.
+fn link_key_macs(hive: &Hive<Cursor<Vec<u8>>>, cs: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let keys_path = format!(r"{cs}\Services\BTHPORT\Parameters\Keys");
+    let Ok(Some(keys)) = hive.open_key(&keys_path) else {
+        return out;
+    };
+    let Ok(adapters) = keys.subkeys() else {
+        return out;
+    };
+    for adapter in adapters {
+        let Ok(values) = adapter.values() else {
+            continue;
+        };
+        for value in values {
+            if let Some(mac) = parse_mac(&value.name()) {
+                out.insert(mac);
+            }
+        }
+    }
+    out
+}
 
 /// A Bluetooth finding — either the neutral per-device evidence record or the graded stored-link-key
 /// signal.
