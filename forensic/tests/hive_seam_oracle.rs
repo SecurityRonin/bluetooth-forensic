@@ -58,9 +58,8 @@ fn ours(devices: &[BluetoothDevice]) -> Vec<Rec> {
 /// (loud), never a silent empty.
 fn oracle(hive_path: &Path) -> Option<Vec<Rec>> {
     let script = concat!(env!("CARGO_MANIFEST_DIR"), "/../scripts/bthport_oracle.py");
-    let out = match Command::new("python3").arg(script).arg(hive_path).output() {
-        Ok(o) => o,
-        Err(_) => return None, // no python3 interpreter → skip
+    let Ok(out) = Command::new("python3").arg(script).arg(hive_path).output() else {
+        return None; // no python3 interpreter → skip
     };
     if out.status.code() == Some(3) {
         return None; // regipy not installed → skip

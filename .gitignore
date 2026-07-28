@@ -11,3 +11,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Python bytecode (oracle script)
+__pycache__/
+*.pyc
