@@ -17,5 +17,9 @@ winreg-core = { workspace = true }
 forensicnomicon = { workspace = true }
 jiff = { workspace = true }
 
+[dev-dependencies]
+# Test-only: parse the independent-oracle JSON in the hive-walk differential (hive_seam_oracle.rs).
+serde_json = "1"
+
 [lints]
 workspace = true
