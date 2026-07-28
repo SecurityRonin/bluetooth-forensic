@@ -21,6 +21,13 @@ const REG_SZ: u32 = 1;
 const REG_BINARY: u32 = 3;
 const NULL: u32 = 0xFFFF_FFFF;
 
+/// A reserved root `nk` cell whose subkey list is patched in once its children exist.
+pub struct RootSlot {
+    pub cell_offset: u32,
+    subkey_count_at: usize,
+    subkeys_list_at: usize,
+}
+
 /// One device the canonical fixture is expected to yield — the answer key an independent oracle must
 /// reproduce.
 pub struct ExpectedDevice {
@@ -150,6 +157,34 @@ impl HiveBuilder {
         self.nk(name, NK_COMP_NAME, subkeys_list, subkey_count, NULL, 0)
     }
 
+    /// Reserve the root `nk` cell **as the first cell in the hbin**, with its subkey list left
+    /// unset, and return a [`RootSlot`] for later back-patching.
+    ///
+    /// A real hive's root key is the first cell of the first hbin, and independent parsers (e.g.
+    /// regipy) locate the root that way rather than via the base block's `root_key_offset`. Emitting
+    /// the root first — then patching in its subkey list once the children exist — keeps the image
+    /// faithful to both our `winreg-core` reader (which follows `root_key_offset`) and a
+    /// first-cell-based parser.
+    pub fn reserve_root(&mut self, name: &str, flags: u16) -> RootSlot {
+        let cell_offset = self.nk(name, flags, NULL, 0, NULL, 0);
+        // Payload begins after the 4-byte cell-size header; within it subkey_count is at 20 and the
+        // stable subkeys-list offset at 28 (see `nk`).
+        let payload = (cell_offset + 4) as usize;
+        RootSlot {
+            cell_offset,
+            subkey_count_at: payload + 20,
+            subkeys_list_at: payload + 28,
+        }
+    }
+
+    /// Fill in a reserved root's subkey list and count once the children have been allocated.
+    pub fn patch_root(&mut self, slot: &RootSlot, subkeys_list: u32, subkey_count: u32) {
+        self.body[slot.subkey_count_at..slot.subkey_count_at + 4]
+            .copy_from_slice(&subkey_count.to_le_bytes());
+        self.body[slot.subkeys_list_at..slot.subkeys_list_at + 4]
+            .copy_from_slice(&subkeys_list.to_le_bytes());
+    }
+
     /// Seal the image: pad the hbin to a 4096 multiple, patch its size, prepend the base block.
     pub fn finish(mut self, root_offset: u32) -> Vec<u8> {
         let bins_size = self.body.len().div_ceil(4096) * 4096;
@@ -210,6 +245,9 @@ fn utf16le_z(s: &str) -> Vec<u8> {
 pub fn build_system_hive() -> Vec<u8> {
     let mut b = HiveBuilder::new();
 
+    // Root is the first cell (real-hive layout); its subkey list is patched in at the end.
+    let root = b.reserve_root("root", NK_COMP_NAME | NK_HIVE_ENTRY);
+
     // ── Device 1: AA:BB:CC:DD:EE:FF, "Sony WH-1000XM4", both timestamps, link key present ──
     let d1_name_bytes = utf16le_z("Sony WH-1000XM4");
     let d1_name_data = b.data(&d1_name_bytes);
@@ -252,7 +290,7 @@ pub fn build_system_hive() -> Vec<u8> {
     let cs_li = b.li(&[services_nk]);
     let cs_nk = b.key("ControlSet001", cs_li, 1);
     let root_li = b.li(&[cs_nk]);
-    let root_nk = b.nk("root", NK_COMP_NAME | NK_HIVE_ENTRY, root_li, 1, NULL, 0);
+    b.patch_root(&root, root_li, 1);
 
-    b.finish(root_nk)
+    b.finish(root.cell_offset)
 }
