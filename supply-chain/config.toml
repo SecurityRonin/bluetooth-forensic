@@ -16,6 +16,12 @@ url = "https://raw.githubusercontent.com/google/rust-crate-audits/main/audits.to
 [imports.mozilla]
 url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 
+[policy.bluetooth-forensic]
+audit-as-crates-io = false
+
+[policy.bluetooth-forensic-core]
+audit-as-crates-io = false
+
 [[exemptions.binrw]]
 version = "0.4.0"
 criteria = "safe-to-deploy"
