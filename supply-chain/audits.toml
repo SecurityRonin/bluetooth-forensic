@@ -2,3 +2,27 @@
 # cargo-vet audits file
 
 [audits]
+
+[[trusted.itoa]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-05-02"
+end = "2027-08-02"
+
+[[trusted.memchr]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2027-08-02"
+
+[[trusted.serde_json]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-02-28"
+end = "2027-08-02"
+
+[[trusted.zmij]]
+criteria = "safe-to-run"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2025-12-18"
+end = "2027-08-02"
