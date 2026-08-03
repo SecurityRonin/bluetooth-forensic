@@ -294,3 +294,78 @@ pub fn build_system_hive() -> Vec<u8> {
 
     b.finish(root.cell_offset)
 }
+
+/// A structurally plausible but dangling cell offset: it parses as an offset and
+/// points at nothing, which is what a truncated or tampered hive looks like in
+/// practice. Used to drive the `subkeys()` / `values()` error paths that a
+/// well-formed fixture can never reach.
+const DANGLING: u32 = 0x00BA_DBAD;
+
+/// Wrap caller-built `Parameters` children in the
+/// `ControlSet001\Services\BTHPORT\Parameters` chain and seal the image.
+fn bthport_hive(make_children: impl FnOnce(&mut HiveBuilder) -> Vec<u32>) -> Vec<u8> {
+    let mut b = HiveBuilder::new();
+    let root = b.reserve_root("root", NK_COMP_NAME | NK_HIVE_ENTRY);
+    let children = make_children(&mut b);
+    let count = children.len() as u32;
+    let params_li = b.li(&children);
+    let params_nk = b.key("Parameters", params_li, count);
+    let bthport_li = b.li(&[params_nk]);
+    let bthport_nk = b.key("BTHPORT", bthport_li, 1);
+    let services_li = b.li(&[bthport_nk]);
+    let services_nk = b.key("Services", services_li, 1);
+    let cs_li = b.li(&[services_nk]);
+    let cs_nk = b.key("ControlSet001", cs_li, 1);
+    let root_li = b.li(&[cs_nk]);
+    b.patch_root(&root, root_li, 1);
+    b.finish(root.cell_offset)
+}
+
+/// `Devices` present, `Keys` absent — a device that was paired but whose link key
+/// was removed (or a hive captured before any key was stored).
+pub fn build_hive_without_keys() -> Vec<u8> {
+    bthport_hive(|b| {
+        let dev = b.key("aabbccddeeff", NULL, 0);
+        let devices_li = b.li(&[dev]);
+        let devices_nk = b.key("Devices", devices_li, 1);
+        vec![devices_nk]
+    })
+}
+
+/// `Devices` exists but its subkey list dangles — the device enumeration must be
+/// abandoned for this control set rather than trusted or panicked on.
+pub fn build_hive_with_unreadable_devices() -> Vec<u8> {
+    bthport_hive(|b| {
+        let devices_nk = b.key("Devices", DANGLING, 3);
+        let keys_li = b.li(&[]);
+        let keys_nk = b.key("Keys", keys_li, 0);
+        vec![devices_nk, keys_nk]
+    })
+}
+
+/// `Keys` exists but its subkey list dangles — the link-key cross-reference must
+/// degrade to "no keys known", never take the device walk down with it.
+pub fn build_hive_with_unreadable_keys() -> Vec<u8> {
+    bthport_hive(|b| {
+        let dev = b.key("aabbccddeeff", NULL, 0);
+        let devices_li = b.li(&[dev]);
+        let devices_nk = b.key("Devices", devices_li, 1);
+        let keys_nk = b.key("Keys", DANGLING, 1);
+        vec![devices_nk, keys_nk]
+    })
+}
+
+/// A `Keys` adapter whose value list dangles — one unreadable adapter must be
+/// skipped, leaving any sibling adapters still readable.
+pub fn build_hive_with_unreadable_adapter_values() -> Vec<u8> {
+    bthport_hive(|b| {
+        let dev = b.key("aabbccddeeff", NULL, 0);
+        let devices_li = b.li(&[dev]);
+        let devices_nk = b.key("Devices", devices_li, 1);
+
+        let broken = b.nk("112233445566", NK_COMP_NAME, NULL, 0, DANGLING, 1);
+        let keys_li = b.li(&[broken]);
+        let keys_nk = b.key("Keys", keys_li, 1);
+        vec![devices_nk, keys_nk]
+    })
+}
