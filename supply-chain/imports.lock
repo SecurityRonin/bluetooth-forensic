@@ -1,6 +1,27 @@
 
 # cargo-vet imports lock
 
+[[publisher.forensicnomicon]]
+version = "1.7.0"
+when = "2026-07-16"
+user-id = 347968
+user-login = "h4x0r"
+user-name = "Albert Hui"
+
+[[publisher.forensicnomicon-core]]
+version = "1.2.0"
+when = "2026-07-16"
+user-id = 347968
+user-login = "h4x0r"
+user-name = "Albert Hui"
+
+[[publisher.forensicnomicon-data]]
+version = "1.3.0"
+when = "2026-07-16"
+user-id = 347968
+user-login = "h4x0r"
+user-name = "Albert Hui"
+
 [[publisher.itoa]]
 version = "1.0.18"
 when = "2026-03-20"
@@ -28,6 +49,20 @@ when = "2024-09-19"
 user-id = 1139
 user-login = "Manishearth"
 user-name = "Manish Goregaokar"
+
+[[publisher.winreg-core]]
+version = "0.2.0"
+when = "2026-07-06"
+user-id = 347968
+user-login = "h4x0r"
+user-name = "Albert Hui"
+
+[[publisher.winreg-format]]
+version = "0.1.0"
+when = "2026-06-13"
+user-id = 347968
+user-login = "h4x0r"
+user-name = "Albert Hui"
 
 [[publisher.zmij]]
 version = "1.0.23"
