@@ -3,6 +3,24 @@
 
 [audits]
 
+[[trusted.forensicnomicon]]
+criteria = "safe-to-deploy"
+user-id = 347968 # Albert Hui (h4x0r)
+start = "2026-06-05"
+end = "2027-08-05"
+
+[[trusted.forensicnomicon-core]]
+criteria = "safe-to-deploy"
+user-id = 347968 # Albert Hui (h4x0r)
+start = "2026-06-28"
+end = "2027-08-05"
+
+[[trusted.forensicnomicon-data]]
+criteria = "safe-to-deploy"
+user-id = 347968 # Albert Hui (h4x0r)
+start = "2026-06-28"
+end = "2027-08-05"
+
 [[trusted.itoa]]
 criteria = "safe-to-run"
 user-id = 3618 # David Tolnay (dtolnay)
@@ -20,6 +38,18 @@ criteria = "safe-to-run"
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-02-28"
 end = "2027-08-02"
+
+[[trusted.winreg-core]]
+criteria = "safe-to-deploy"
+user-id = 347968 # Albert Hui (h4x0r)
+start = "2026-06-13"
+end = "2027-08-05"
+
+[[trusted.winreg-format]]
+criteria = "safe-to-deploy"
+user-id = 347968 # Albert Hui (h4x0r)
+start = "2026-06-13"
+end = "2027-08-05"
 
 [[trusted.zmij]]
 criteria = "safe-to-run"
